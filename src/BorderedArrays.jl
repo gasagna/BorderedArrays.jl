@@ -3,8 +3,6 @@
 # ------------------------------------------------------------------- #
 module BorderedArrays
 
-using Devectorize
-
 import Base: convert,
              lufact!,
              full,
@@ -24,11 +22,8 @@ export BorderedMatrix,
        BorderedVector,
        BlockDiagonalMatrix,
        BlockVector,
-       block,
        nblocks,
-       blocksize,
-       upper, 
-       lower
+       blocksize
 
 # ~~~ Block Vector ~~~
 
