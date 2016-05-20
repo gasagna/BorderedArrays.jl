@@ -75,7 +75,8 @@ let
         b = rand(n)
         c = rand(n)
         d = rand()
-        M = BorderedMatrix(A, b, c, d)
+        M  = BorderedMatrix(A, b, c, d)
+        Mv = BorderedMatrix(copy(A), copy(b), copy(c), copy(d))
         Md = full(M)
 
         # demo array
@@ -85,10 +86,12 @@ let
         rd = full(r)
 
         # solutions
-        r = A_ldiv_B!(M, r, :BED)
+        rv = A_ldiv_B!(Mv, full(r), :BED)
+        r  = A_ldiv_B!(M,  r,       :BED)
         rd = Md\rd
 
         # check
         @test r ≈ rd
+        @test r ≈ rv
     end
 end

@@ -114,8 +114,8 @@ end
 
 # ~~~ Linear algebra for bordered systems ~~~
 
-A_ldiv_B!(M::BorderedMatrix, r::AbstractVector, alg::Symbol=:BED) = 
-    A_ldiv_B!(M, BorderedVector(slice(r[1:end-1]), r[end]), :BED)
+A_ldiv_B!(M::BorderedMatrix, r::Vector, alg::Symbol=:BED) = 
+    A_ldiv_B!(M, BorderedVector(slice(r, 1:(length(r)-1)), r[end]), :BED)
 
 function A_ldiv_B!(M::BorderedMatrix, r::BorderedVector, alg::Symbol=:BED)
     # Solve the system
