@@ -1,6 +1,7 @@
 # ------------------------------------------------------------------- #
 # Copyright 2015-2016, Davide Lasagna, AFM, University of Southampton #
 # ------------------------------------------------------------------- #
+__precompile__()
 module BorderedArrays
 
 import Base: convert,
@@ -13,7 +14,7 @@ import Base: convert,
              linearindexing,
              LinearSlow, 
              dot
-
+             
 import Base.LinAlg: A_ldiv_B!,
                     At_ldiv_B!,
                     Ac_ldiv_B!
@@ -156,10 +157,10 @@ function alg_BED!(M::BorderedMatrix, r::BorderedVector)
     g = r._₂  # Scalar
 
     # step 0: factorise A
-    lu = lufact!(A)
+    Aᶠ = lufact!(A)
 
     # step 1 solve A' * w = c - overwrite c with w
-    w = At_ldiv_B!(lu, c)
+    w = At_ldiv_B!(Aᶠ, c)
 
     # step 2: compute δ⁺ = d - w'*b
     δ⁺ = d - dot(w, b)
@@ -171,7 +172,7 @@ function alg_BED!(M::BorderedMatrix, r::BorderedVector)
     @simd for i in 1:length(f)
         @inbounds f[i] -= b[i]*r._₂
     end
-    A_ldiv_B!(lu, f)
+    A_ldiv_B!(Aᶠ, f)
 
     # return solution
     r
