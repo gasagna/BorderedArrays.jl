@@ -87,13 +87,11 @@ let
         rd = full(r)
 
         # solutions
-        rv = A_ldiv_B!(Mv, full(r), :BED)
-        r  = A_ldiv_B!(M,  r,       :BED)
+        r  = A_ldiv_B!(M, r, :BED)
         rd = Md\rd
 
         # check
         @test r ≈ rd
-        @test r ≈ rv
     end
 end
 
