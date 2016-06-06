@@ -13,7 +13,9 @@ import Base: convert,
              length,
              linearindexing,
              LinearSlow, 
-             dot
+             dot, 
+             copy,
+             similar
              
 import Base.LinAlg: A_ldiv_B!,
                     At_ldiv_B!,
@@ -24,7 +26,7 @@ export BorderedMatrix,
 
 # ~~~ Bordered Vector ~~~
 
-# Type to store a vector bordered by a final value
+# Type to store a vector(s) bordered by a final value(s)
 type BorderedVector{T<:Number, V<:AbstractVector} <: AbstractVector{T}
     _₁::V # main part
     _₂::T # last element
@@ -50,6 +52,12 @@ function setindex!(v::BorderedVector, val, i::Integer)
     throw(BoundsError())
 end
 
+# copy and similar
+copy(v::BorderedVector) = BorderedVector(copy(v._₁), v._₂)
+similar(v::BorderedVector) = BorderedVector(similar(v._₁), zero(v._₂))
+
+# collect to a DenseArray - useful for debugging solvers
+full(v::BorderedVector) = collect(v)
 
 # ~~~ Bordered Matrix ~~~
 
@@ -98,11 +106,14 @@ function getindex(M::BorderedMatrix, i::Integer, j::Integer)
     throw(BoundsError())
 end            
 
+# copy/similar
+copy(M::BorderedMatrix) = 
+    BorderedMatrix(copy(M._₁₁), copy(M._₁₂), copy(M._₂₁), M._₂₂)
 
-# ~~~ Utilities ~~~
+similar(M::BorderedMatrix) = 
+    BorderedMatrix(similar(M._₁₁), similar(M._₁₂), similar(M._₂₁), zero(M._₂₂))
 
 # collect to a DenseArray - useful for debugging solvers
-full(v::BorderedVector) = collect(v)
 function full{T}(M::BorderedMatrix{T})
     m, n = size(M)
     Mdense = zeros(T, m, n)
@@ -114,7 +125,7 @@ end
 
 
 # ~~~ Linear algebra for bordered systems ~~~
-function A_ldiv_B!(M::BorderedMatrix, r::BorderedVector, alg::Symbol=:BED)
+function A_ldiv_B!(M::BorderedMatrix, r::BorderedVector, alg::Symbol=:BEM)
     # Solve the system
     #         
     #     M * z = r
@@ -138,8 +149,63 @@ function A_ldiv_B!(M::BorderedMatrix, r::BorderedVector, alg::Symbol=:BED)
 
     # Select factorisation algorithm
     alg == :BED && return alg_BED!(M, r)
+    alg == :BEM && return alg_BEM!(M, r)
 
     throw(ArgumentError("invalid `alg` parameter"))
+end
+
+# solve bordered system with block elimination method
+function alg_BEM!(M::BorderedMatrix, r::BorderedVector)
+    # rename variables
+    A = M._₁₁ # AbstractMatrix
+    b = M._₁₂ # AbstractVector
+    c = M._₂₁ # AbstractVector
+    d = M._₂₂ # Scalar
+    f = r._₁  # AbstractVector
+    g = r._₂  # Scalar
+
+    # step 0: factorise A
+    Aᶠ = lufact!(A)
+
+    # step 1: solve Aᵀw = c
+    w = At_ldiv_B!(Aᶠ, copy(c))
+
+    # step 2: compute δ⁺ = d - w'*b
+    δ⁺ = d - dot(w, b)
+
+    # step 3: solve Av = b
+    v = At_ldiv_B!(Aᶠ, copy(b))
+
+    # step 4: 
+    δ = d - dot(c, v)
+
+    # step 5:
+    y₁ = (g - dot(w, f))/δ⁺
+
+    # step 6: f₁ = f - b*y₁ - aliased to f
+    @simd for i in 1:length(f)
+        @inbounds f[i] -= b[i]*y₁
+    end
+
+    # step 7: 
+    g₁ = g - d*y₁
+
+    # step 8
+    ξ = A_ldiv_B!(Aᶠ, f)
+
+    # step 9
+    y₂ = (g₁ - dot(c, ξ))/δ
+
+    # step 10: x = ξ - v*y₂ - aliased to r._₁
+    x = r._₁
+    @simd for i in 1:length(x)
+        @inbounds x[i] = ξ[i] - v[i]*y₂
+    end
+
+    # step 11 - y = y₁ + y₂
+    r._₂ = y₁ + y₂
+
+    r
 end
 
 # solve bordered system using doolittle factorisation

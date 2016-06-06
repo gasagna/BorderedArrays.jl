@@ -1,3 +1,4 @@
+using BenchmarkTools
 using Base.Test
 using BorderedArrays
 using CyclicMatrices
@@ -67,6 +68,47 @@ let
     @test eltype(M) == Int
 end
 
+# test copy/similar for vector
+let
+    x = BorderedVector([1, 2, 3, 4, 5, 6], 7)
+    y = copy(x)
+    @test y == [1, 2, 3, 4, 5, 6, 7]
+    y[1] = 5
+    @test x[1] == 1
+
+    s = similar(x)
+    @test isa(s, BorderedVector)
+    for fun in [length, size, eltype]
+        @test fun(s) == fun(x)
+    end
+end
+
+# test copy/similar for matrix
+let
+    A = [1 2 3 1;
+         2 3 4 1;
+         2 3 4 1;
+         1 2 3 1]
+    b = [1, 2, 3, 4]
+    c = [4, 3, 2, 1]
+    d = 0
+    M = BorderedMatrix(A, b, c, d)
+    N = copy(M)
+    @test full(N) == [1  2  3  1  1;
+                      2  3  4  1  2;
+                      2  3  4  1  3;
+                      1  2  3  1  4;
+                      4  3  2  1  0] == M
+    N._₁₁[1, 1] = 5
+    @test M[1, 1] == 1
+
+    N = similar(M)
+    @test isa(N, BorderedMatrix)
+    for fun in [size, eltype]
+        @test fun(N) == fun(M)
+    end
+end
+
 # test solution of bordered matrix
 let
     srand(0)
@@ -87,11 +129,13 @@ let
         rd = full(r)
 
         # solutions
-        r  = A_ldiv_B!(M, r, :BED)
+        rBEM  = A_ldiv_B!(copy(M), copy(r), :BEM)
+        rBED  = A_ldiv_B!(copy(M), copy(r), :BED)
         rd = Md\rd
 
         # check
-        @test r ≈ rd
+        @test rBED ≈ rd
+        @test rBEM ≈ rd
     end
 end
 
@@ -126,5 +170,5 @@ let
     c = collect(2.0:13.0)
     d = 0.0
     M = BorderedMatrix(A, b, c, d)
-
+    r = BorderedVector(ones(size(b)), 1.0)
 end
