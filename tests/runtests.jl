@@ -139,36 +139,24 @@ let
     end
 end
 
-# test with cyclic matrix
+# test BEM solves correctly system with ill-conditioned A
 let
-
-    D = Float64[ 1  3   8  0  -1  0   0  0   0  0   0  0;
-                 2  4   0  8   0 -1   0  0   0  0   0  0;
-                -8  0   4  2   8  0  -1  0   0  0   0  0;
-                 0 -8   3  1   0  8   0 -1   0  0   0  0;
-                 1  0  -8  0   1  2   8  0  -1  0   0  0;
-                 0  1   0 -8   3  4   0  8   0 -1   0  0;
-                 0  0   1  0  -8  0   1  4   8  0  -1  0;
-                 0  0   0  1   0 -8   3  2   0  8   0  1;
-                 0  0   0  0   1  0  -8  0   2  3   8  0;
-                 0  0   0  0   0  1   0 -8   1  4   0  8;
-                 0  0   0  0   0  0   1  0  -8  0   3  2;
-                 0  0   0  0   0  0   0  1   0 -8   4  1]
-
-    A¹= Float64[ 1  0 -8  0;
-                 0  1  0 -8;
-                 0  0  1  0;
-                 0  0  0  1]
-
-    Cⁿ= Float64[-1  0  0  0;
-                 0 -1  0  0;
-                 8  0 -1  0;
-                 0  8  0 -1]
-
-    A = CyclicMatrix(sparse(D), A¹, Cⁿ) 
-    b = collect(1.0:12.0)
-    c = collect(2.0:13.0)
-    d = 0.0
+    A = Float64[1 0     0;
+                0 1     0;
+                0 0 1e-32]
+    b = Float64[1, 1, 1]
+    c = Float64[2, 2, 2]
+    d = 1.0
     M = BorderedMatrix(A, b, c, d)
-    r = BorderedVector(ones(size(b)), 1.0)
+    r = BorderedVector([3.0, 4.0, 5.0], 1.0)
+
+    @test cond(full(M)) < 11
+    @test cond(full(A)) > 1e31
+
+    xBEM = A_ldiv_B!(copy(M), copy(r), :BEM)
+    xBED = A_ldiv_B!(copy(M), copy(r), :BED)
+    x = full(M)\full(r)
+
+    @test x == xBEM
+    @test x != xBED
 end
