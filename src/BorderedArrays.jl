@@ -184,7 +184,7 @@ function alg_BEM!(MLU::BorderedMatrixLU, r::BorderedVector)
     δ⁺ = d - dot(w, b)
 
     # step 3: solve Av = b
-    v = At_ldiv_B!(Aᶠ, copy(b))
+    v = A_ldiv_B!(Aᶠ, copy(b))
 
     # step 4: 
     δ = d - dot(c, v)
