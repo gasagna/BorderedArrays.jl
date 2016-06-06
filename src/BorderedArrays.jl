@@ -15,7 +15,8 @@ import Base: convert,
              LinearSlow, 
              dot, 
              copy,
-             similar
+             similar,
+             Factorization
              
 import Base.LinAlg: A_ldiv_B!,
                     At_ldiv_B!,
@@ -125,6 +126,17 @@ end
 
 
 # ~~~ Linear algebra for bordered systems ~~~
+immutable BorderedMatrixLU{T<:Number, 
+                           M<:Factorization, V<:AbstractVector} <: Factorization{T}
+    _₁₁::M # the parent matrix - factorised in place
+    _₁₂::V # the right bordering vector
+    _₂₁::V # the bottom bordering vector
+    _₂₂::T # the bordering scalar
+end
+
+lufact!(M::BorderedMatrix) = 
+    BorderedMatrixLU(lufact!(M._₁₁), M._₁₂, M._₂₁, M._₂₂)
+
 function A_ldiv_B!(M::BorderedMatrix, r::BorderedVector, alg::Symbol=:BEM)
     # Solve the system
     #         
@@ -140,32 +152,30 @@ function A_ldiv_B!(M::BorderedMatrix, r::BorderedVector, alg::Symbol=:BEM)
     #         \ g /
     #
     # by overwriting the solution in r
-
-    # checks
     size(M, 1) == size(M, 2) ||
         throws(DimensionMismatch("matrix must be square"))
     size(M, 1) == length(r) || 
         throws(DimensionMismatch("inner dimensions must agree"))
 
-    # Select factorisation algorithm
-    alg == :BED && return alg_BED!(M, r)
-    alg == :BEM && return alg_BEM!(M, r)
+    A_ldiv_B!(lufact!(M), r, alg)
+end
 
+function A_ldiv_B!(MLU::BorderedMatrixLU, r::BorderedVector, alg::Symbol=:BEM)
+    # Select factorisation algorithm
+    alg == :BED && return alg_BED!(MLU, r)
+    alg == :BEM && return alg_BEM!(MLU, r)
     throw(ArgumentError("invalid `alg` parameter"))
 end
 
 # solve bordered system with block elimination method
-function alg_BEM!(M::BorderedMatrix, r::BorderedVector)
+function alg_BEM!(MLU::BorderedMatrixLU, r::BorderedVector)
     # rename variables
-    A = M._₁₁ # AbstractMatrix
-    b = M._₁₂ # AbstractVector
-    c = M._₂₁ # AbstractVector
-    d = M._₂₂ # Scalar
-    f = r._₁  # AbstractVector
-    g = r._₂  # Scalar
-
-    # step 0: factorise A
-    Aᶠ = lufact!(A)
+    Aᶠ = MLU._₁₁ # factorisation of AbstractMatrix
+    b  = MLU._₁₂ # AbstractVector
+    c  = MLU._₂₁ # AbstractVector
+    d  = MLU._₂₂ # Scalar
+    f  = r._₁    # AbstractVector
+    g  = r._₂    # Scalar
 
     # step 1: solve Aᵀw = c
     w = At_ldiv_B!(Aᶠ, copy(c))
@@ -209,17 +219,14 @@ function alg_BEM!(M::BorderedMatrix, r::BorderedVector)
 end
 
 # solve bordered system using doolittle factorisation
-function alg_BED!(M::BorderedMatrix, r::BorderedVector)
+function alg_BED!(MLU::BorderedMatrixLU, r::BorderedVector)
     # rename variables
-    A = M._₁₁ # AbstractMatrix
-    b = M._₁₂ # AbstractVector
-    c = M._₂₁ # AbstractVector
-    d = M._₂₂ # Scalar
-    f = r._₁  # AbstractVector
-    g = r._₂  # Scalar
-
-    # step 0: factorise A
-    Aᶠ = lufact!(A)
+    Aᶠ = MLU._₁₁ # Factorization of AbstractMatrix
+    b  = MLU._₁₂ # AbstractVector
+    c  = MLU._₂₁ # AbstractVector
+    d  = MLU._₂₂ # Scalar
+    f  = r._₁  # AbstractVector
+    g  = r._₂  # Scalar
 
     # step 1 solve A' * w = c - overwrite c with w
     w = At_ldiv_B!(Aᶠ, c)
