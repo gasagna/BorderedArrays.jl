@@ -66,6 +66,12 @@ let
     @test_throws BoundsError M[6, 1]
     @test_throws BoundsError M[6, 6]
     @test eltype(M) == Int
+
+    # test setindex
+    for i = 1:5, j = 1:5
+        M[i, j] = i*j
+    end
+    @test M == [i*j for i = 1:5, j = 1:5]
 end
 
 # test copy/similar for vector

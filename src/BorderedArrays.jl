@@ -105,7 +105,25 @@ function getindex(M::BorderedMatrix, i::Integer, j::Integer)
         end
     end
     throw(BoundsError())
-end            
+end        
+
+function setindex!(M::BorderedMatrix, val, i::Integer, j::Integer)
+    m, n = size(M)
+    if i < m
+        if j < n
+            return M._₁₁[i, j] = val
+        elseif j == n
+            return M._₁₂[i] = val
+        end
+    elseif i == m
+        if j < n
+            return M._₂₁[j] = val
+        elseif j == n
+            return M._₂₂ = val
+        end
+    end
+    throw(BoundsError())
+end         
 
 # copy/similar
 copy(M::BorderedMatrix) = 
