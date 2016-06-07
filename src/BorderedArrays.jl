@@ -178,13 +178,13 @@ function alg_BEM!(MLU::BorderedMatrixLU, r::BorderedVector)
     g  = r._₂    # Scalar
 
     # step 1: solve Aᵀw = c
-    w = At_ldiv_B!(Aᶠ, copy(c))
+    w = At_ldiv_B!(Aᶠ, copy(c))        # allocation
 
     # step 2: compute δ⁺ = d - w'*b
     δ⁺ = d - dot(w, b)
 
     # step 3: solve Av = b
-    v = A_ldiv_B!(Aᶠ, copy(b))
+    v = A_ldiv_B!(Aᶠ, copy(b))         # allocation
 
     # step 4: 
     δ = d - dot(c, v)
