@@ -77,11 +77,11 @@ type BorderedMatrix{T<:Number,
         new(M₁₁, M₁₂, M₂₁, M₂₂)
     end
 end
-BorderedMatrix{T}(M₁₁::AbstractMatrix{T}, 
-                  M₁₂::AbstractVector{T}, 
-                  M₂₁::AbstractVector{T},
-                  M₂₂::T) = 
-    BorderedMatrix{T, typeof(M₁₁), typeof(M₁₂)}(M₁₁, M₁₂, M₂₁, M₂₂)
+BorderedMatrix{T, S}(M₁₁::AbstractMatrix{T}, 
+                     M₁₂::AbstractVector{T}, 
+                     M₂₁::AbstractVector{T},
+                     M₂₂::S) = 
+    BorderedMatrix{T, typeof(M₁₁), typeof(M₁₂)}(M₁₁, M₁₂, M₂₁, convert(T, M₂₂))
 
 # array interface
 eltype{T}(v::BorderedMatrix{T}) = T

@@ -71,7 +71,7 @@ let
          1 2 3 1]
     b = [1, 2, 3, 4]
     c = [4, 3, 2, 1]
-    d = 0
+    d = 0.0 # will convert to int
     M = BorderedMatrix(A, b, c, d)
     @test size(M) == (5, 5)
     @test size(M, 1) == size(M, 2) == 5
