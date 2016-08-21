@@ -2,7 +2,7 @@
 # Copyright 2015-2016, Davide Lasagna, AFM, University of Southampton #
 # ------------------------------------------------------------------- #
 __precompile__()
-module BorderedArrays
+module BorderedMatrices
 
 import Base: convert,
              lufact!,

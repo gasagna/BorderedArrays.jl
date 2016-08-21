@@ -1,7 +1,6 @@
 using BenchmarkTools
 using Base.Test
-using BorderedArrays
-using CyclicMatrices
+using BorderedMatrices
 import Base.LinAlg: A_ldiv_B!,
                     At_ldiv_B!,
                     Ac_ldiv_B!
