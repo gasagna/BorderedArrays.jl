@@ -38,9 +38,7 @@ BorderedVector{T, S}(v₁::AbstractVector{T}, v₂::S) =
     BorderedVector{T, typeof(v₁)}(v₁, convert(T, v₂)) 
 
 # array interface
-length(v::BorderedVector) = length(v._₁) + 1
-size(v::BorderedVector) = (length(v), )
-eltype{T}(v::BorderedVector{T}) = T
+size(v::BorderedVector) = (length(v._₁) + 1, )
 linearindexing(v::BorderedVector) = LinearSlow()
 
 function getindex(v::BorderedVector, i::Integer) 
