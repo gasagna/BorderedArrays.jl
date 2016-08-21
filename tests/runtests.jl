@@ -8,7 +8,7 @@ import Base.LinAlg: A_ldiv_B!,
 
 # test bordered block vector
 let
-    x = BorderedVector([1, 2, 3, 4, 5, 6], 7)
+    x = BorderedVector([1, 2, 3, 4, 5, 6], 7.0)
     @test length(x) == 7
     @test size(x) == (7, )
     @test_throws BoundsError size(x, 0)

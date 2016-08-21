@@ -33,8 +33,9 @@ type BorderedVector{T<:Number, V<:AbstractVector} <: AbstractVector{T}
     _₂::T # last element
     BorderedVector(v₁::AbstractVector{T}, v₂::T) = new(v₁, v₂)
 end
-BorderedVector{T}(v₁::AbstractVector{T}, v₂::T) = 
-    BorderedVector{T, typeof(v₁)}(v₁, v₂) 
+# Note: `v₂` is converted to the eltype of `v₁`
+BorderedVector{T, S}(v₁::AbstractVector{T}, v₂::S) = 
+    BorderedVector{T, typeof(v₁)}(v₁, convert(T, v₂)) 
 
 # array interface
 length(v::BorderedVector) = length(v._₁) + 1
