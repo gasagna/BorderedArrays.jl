@@ -42,6 +42,25 @@ let
         @test_throws BoundsError x[n+1 + 1]
         @test eltype(x) == Float64
     end
+
+    # test fancy setindexing
+    x = BorderedVector([1, 2, 3, 4], 5)
+    x[1:end] = 0
+    @test x == [0, 0, 0, 0, 0]
+
+    x = BorderedVector([1, 2, 3, 4], 5)
+    x[[1, 5]] = 0
+    @test x == [0, 2, 3, 4, 0]
+
+    x = BorderedVector([1, 2, 3, 4], 5)
+    x[:] = 1
+    @test x == [1, 1, 1, 1, 1]
+
+    # test fancy getindexing
+    x = BorderedVector([1, 2, 3, 4], 5)
+    @test x[:] == [1, 2, 3, 4, 5]
+    @test x[1:3] == [1, 2, 3]
+    @test x[4:end] == [4, 5]
 end
 
 # test bordered matrix
