@@ -84,7 +84,6 @@ BorderedMatrix{T, S}(M₁₁::AbstractMatrix{T},
     BorderedMatrix{T, typeof(M₁₁), typeof(M₁₂)}(M₁₁, M₁₂, M₂₁, convert(T, M₂₂))
 
 # array interface
-eltype{T}(v::BorderedMatrix{T}) = T
 size(M::BorderedMatrix) = (size(M._₁₁, 1) + 1, size(M._₁₁, 2) + 1)
 linearindexing(v::BorderedMatrix) = LinearSlow()
 
