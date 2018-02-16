@@ -4,90 +4,65 @@
 __precompile__()
 module BorderedMatrices
 
-import Base: convert,
-             lufact!,
-             full,
-             size,
-             getindex,
-             setindex!,
-             length,
-             linearindexing,
-             LinearSlow, 
-             dot, 
-             copy,
-             similar,
-             Factorization
-             
-import Base.LinAlg: A_ldiv_B!,
-                    At_ldiv_B!,
-                    Ac_ldiv_B!
-
-export BorderedMatrix,
-       BorderedVector
+export BorderedMatrix, BorderedVector
 
 # ~~~ Bordered Vector ~~~
 
 # Type to store a vector(s) bordered by a final value(s)
-type BorderedVector{T<:Number, V<:AbstractVector} <: AbstractVector{T}
+mutable struct BorderedVector{T<:Number, V<:AbstractVector{T}} <: AbstractVector{T}
     _₁::V # main part
     _₂::T # last element
-    BorderedVector(v₁::AbstractVector{T}, v₂::T) = new(v₁, v₂)
+    BorderedVector(v₁::V, v₂::Real) where {T, V<:AbstractVector{T}} = 
+    	new{T, V}(v₁, convert(T, v₂))
 end
-# Note: `v₂` is converted to the eltype of `v₁`
-BorderedVector{T, S}(v₁::AbstractVector{T}, v₂::S) = 
-    BorderedVector{T, typeof(v₁)}(v₁, convert(T, v₂)) 
 
 # array interface
-size(v::BorderedVector) = (length(v._₁) + 1, )
-linearindexing(v::BorderedVector) = LinearSlow()
+Base.size(v::BorderedVector) = (length(v._₁) + 1, )
+Base.IndexStyle(v::BorderedVector) = Base.IndexLinear()
 
-function getindex(v::BorderedVector, i::Integer) 
+function Base.getindex(v::BorderedVector, i::Integer) 
     1 <= i <= length(v._₁) && return v._₁[i]
     i == length(v._₁) + 1  && return v._₂
     throw(BoundsError())
 end
-function setindex!(v::BorderedVector, val, i::Integer) 
+function Base.setindex!(v::BorderedVector, val, i::Integer) 
     1 <= i <= length(v._₁) && (v._₁[i] = val; return v)
     i == length(v._₁) + 1  && (v._₂ = val; return v)
     throw(BoundsError())
 end
 
 # copy and similar
-copy(v::BorderedVector) = BorderedVector(copy(v._₁), v._₂)
-similar(v::BorderedVector) = BorderedVector(similar(v._₁), zero(v._₂))
+Base.copy(v::BorderedVector) = BorderedVector(copy(v._₁), v._₂)
+Base.similar(v::BorderedVector) = BorderedVector(similar(v._₁), zero(v._₂))
 
 # collect to a DenseArray - useful for debugging solvers
-full(v::BorderedVector) = collect(v)
+Base.full(v::BorderedVector) = collect(v)
 
 # ~~~ Bordered Matrix ~~~
 
 # type to store a square matrix bordered by two vectors and a scalar
-type BorderedMatrix{T<:Number, 
-                    M<:AbstractMatrix, V<:AbstractVector} <: AbstractMatrix{T}
+mutable struct BorderedMatrix{T<:Number, 
+                              M<:AbstractMatrix{T}, 
+                              V<:AbstractVector{T}} <: AbstractMatrix{T}
     _₁₁::M # main top left - any matrix
     _₁₂::V # vertical right vector - any vector
     _₂₁::V # horizontal bottom vector - any vector
     _₂₂::T # bottom right element - a scalar
-    function BorderedMatrix(M₁₁::AbstractMatrix{T}, 
-                            M₁₂::AbstractVector{T}, 
-                            M₂₁::AbstractVector{T},
-                            M₂₂::T)
+    function BorderedMatrix(M₁₁::M,
+                            M₁₂::V,
+                            M₂₁::V,
+                            M₂₂::Real) where {T, M<:AbstractMatrix{T}, V<:AbstractVector{T}}
         size(M₁₁) == (length(M₁₂), length(M₂₁)) || 
             throw(DimensionMismatch("inconsistent input size"))
-        new(M₁₁, M₁₂, M₂₁, M₂₂)
+        new{T, M, V}(M₁₁, M₁₂, M₂₁, convert(T, M₂₂))
     end
 end
-BorderedMatrix{T, S}(M₁₁::AbstractMatrix{T}, 
-                     M₁₂::AbstractVector{T}, 
-                     M₂₁::AbstractVector{T},
-                     M₂₂::S) = 
-    BorderedMatrix{T, typeof(M₁₁), typeof(M₁₂)}(M₁₁, M₁₂, M₂₁, convert(T, M₂₂))
 
 # array interface
-size(M::BorderedMatrix) = (size(M._₁₁, 1) + 1, size(M._₁₁, 2) + 1)
-linearindexing(v::BorderedMatrix) = LinearSlow()
+Base.size(M::BorderedMatrix) = (size(M._₁₁, 1) + 1, size(M._₁₁, 2) + 1)
+Base.IndexStyle(v::BorderedMatrix) = Base.IndexCartesian()
 
-function getindex(M::BorderedMatrix, i::Integer, j::Integer)
+function Base.getindex(M::BorderedMatrix, i::Integer, j::Integer)
     m, n = size(M)
     if i < m
         if j < n
@@ -105,7 +80,7 @@ function getindex(M::BorderedMatrix, i::Integer, j::Integer)
     throw(BoundsError())
 end        
 
-function setindex!(M::BorderedMatrix, val, i::Integer, j::Integer)
+function Base.setindex!(M::BorderedMatrix, val, i::Integer, j::Integer)
     m, n = size(M)
     if i < m
         if j < n
@@ -124,14 +99,14 @@ function setindex!(M::BorderedMatrix, val, i::Integer, j::Integer)
 end         
 
 # copy/similar
-copy(M::BorderedMatrix) = 
+Base.copy(M::BorderedMatrix) = 
     BorderedMatrix(copy(M._₁₁), copy(M._₁₂), copy(M._₂₁), M._₂₂)
 
-similar(M::BorderedMatrix) = 
+Base.similar(M::BorderedMatrix) = 
     BorderedMatrix(similar(M._₁₁), similar(M._₁₂), similar(M._₂₁), zero(M._₂₂))
 
 # collect to a DenseArray - useful for debugging solvers
-function full{T}(M::BorderedMatrix{T})
+function Base.full{T}(M::BorderedMatrix{T})
     m, n = size(M)
     Mdense = zeros(T, m, n)
     for i = 1:m, j = 1:n
@@ -142,7 +117,7 @@ end
 
 
 # ~~~ Linear algebra for bordered systems ~~~
-immutable BorderedMatrixLU{T<:Number, 
+struct BorderedMatrixLU{T<:Number, 
                            M<:Factorization, V<:AbstractVector} <: Factorization{T}
     _₁₁::M # the parent matrix - factorised in place
     _₁₂::V # the right bordering vector
@@ -150,10 +125,10 @@ immutable BorderedMatrixLU{T<:Number,
     _₂₂::T # the bordering scalar
 end
 
-lufact!(M::BorderedMatrix) = 
+Base.lufact!(M::BorderedMatrix) = 
     BorderedMatrixLU(lufact!(M._₁₁), M._₁₂, M._₂₁, M._₂₂)
 
-function A_ldiv_B!(M::BorderedMatrix, r::BorderedVector, alg::Symbol=:BEM)
+function Base.LinAlg.A_ldiv_B!(M::BorderedMatrix, r::BorderedVector, alg::Symbol=:BEM)
     # Solve the system
     #         
     #     M * z = r
@@ -176,7 +151,7 @@ function A_ldiv_B!(M::BorderedMatrix, r::BorderedVector, alg::Symbol=:BEM)
     A_ldiv_B!(lufact!(M), r, alg)
 end
 
-function A_ldiv_B!(MLU::BorderedMatrixLU, r::BorderedVector, alg::Symbol=:BEM)
+function Base.LinAlg.A_ldiv_B!(MLU::BorderedMatrixLU, r::BorderedVector, alg::Symbol=:BEM)
     # Select factorisation algorithm
     alg == :BED && return alg_BED!(MLU, r)
     alg == :BEM && return alg_BEM!(MLU, r)

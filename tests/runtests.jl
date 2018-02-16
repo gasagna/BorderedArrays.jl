@@ -1,9 +1,5 @@
-using BenchmarkTools
-using Base.Test
 using BorderedMatrices
-import Base.LinAlg: A_ldiv_B!,
-                    At_ldiv_B!,
-                    Ac_ldiv_B!
+using Base.Test
 
 # test bordered block vector
 let
@@ -153,8 +149,8 @@ let
         rd = full(r)
 
         # solutions
-        rBEM  = A_ldiv_B!(copy(M), copy(r), :BEM)
-        rBED  = A_ldiv_B!(copy(M), copy(r), :BED)
+        rBEM  = Base.LinAlg.A_ldiv_B!(copy(M), copy(r), :BEM)
+        rBED  = Base.LinAlg.A_ldiv_B!(copy(M), copy(r), :BED)
         rd = Md\rd
 
         # check
@@ -177,8 +173,8 @@ let
     @test cond(full(M)) < 11
     @test cond(full(A)) > 1e31
 
-    xBEM = A_ldiv_B!(copy(M), copy(r), :BEM)
-    xBED = A_ldiv_B!(copy(M), copy(r), :BED)
+    xBEM = Base.LinAlg.A_ldiv_B!(copy(M), copy(r), :BEM)
+    xBED = Base.LinAlg.A_ldiv_B!(copy(M), copy(r), :BED)
     x = full(M)\full(r)
 
     @test x == xBEM
