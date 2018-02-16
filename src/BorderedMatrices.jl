@@ -118,7 +118,8 @@ end
 
 # ~~~ Linear algebra for bordered systems ~~~
 struct BorderedMatrixLU{T<:Number, 
-                           M<:Factorization, V<:AbstractVector} <: Factorization{T}
+                        M<:Factorization{T}, 
+                        V<:AbstractVector{T}} <: Factorization{T}
     _₁₁::M # the parent matrix - factorised in place
     _₁₂::V # the right bordering vector
     _₂₁::V # the bottom bordering vector
