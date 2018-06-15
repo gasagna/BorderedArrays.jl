@@ -189,9 +189,7 @@ function alg_BEM!(MLU::BorderedMatrixLU, r::BorderedVector)
     y₁ = (g - dot(w, f))/δ⁺
 
     # step 6: f₁ = f - b*y₁ - aliased to f
-    @simd for i in 1:length(f)
-        @inbounds f[i] -= b[i]*y₁
-    end
+    f .-= b*y₁
 
     # step 7: 
     g₁ = g - d*y₁
@@ -202,11 +200,8 @@ function alg_BEM!(MLU::BorderedMatrixLU, r::BorderedVector)
     # step 9
     y₂ = (g₁ - dot(c, ξ))/δ
 
-    # step 10: x = ξ - v*y₂ - aliased to r._1
-    x = r._1
-    @simd for i in 1:length(x)
-        @inbounds x[i] = ξ[i] - v[i]*y₂
-    end
+    # step 10: r._1 = ξ - v*y₂
+    r._1 .= ξ .- v.*y₂
 
     # step 11 - y = y₁ + y₂
     r._2 = y₁ + y₂
