@@ -10,30 +10,30 @@ export BorderedMatrix, BorderedVector
 
 # Type to store a vector(s) bordered by a final value(s)
 mutable struct BorderedVector{T<:Number, V<:AbstractVector{T}} <: AbstractVector{T}
-    _₁::V # main part
-    _₂::T # last element
+    _1::V # main part
+    _2::T # last element
     BorderedVector(v₁::V, v₂::Real) where {T, V<:AbstractVector{T}} = 
     	new{T, V}(v₁, convert(T, v₂))
 end
 
 # array interface
-Base.size(v::BorderedVector) = (length(v._₁) + 1, )
+Base.size(v::BorderedVector) = (length(v._1) + 1, )
 Base.IndexStyle(v::BorderedVector) = Base.IndexLinear()
 
 function Base.getindex(v::BorderedVector, i::Integer) 
-    1 <= i <= length(v._₁) && return v._₁[i]
-    i == length(v._₁) + 1  && return v._₂
+    1 <= i <= length(v._1) && return v._1[i]
+    i == length(v._1) + 1  && return v._2
     throw(BoundsError())
 end
 function Base.setindex!(v::BorderedVector, val, i::Integer) 
-    1 <= i <= length(v._₁) && (v._₁[i] = val; return v)
-    i == length(v._₁) + 1  && (v._₂ = val; return v)
+    1 <= i <= length(v._1) && (v._1[i] = val; return v)
+    i == length(v._1) + 1  && (v._2 = val; return v)
     throw(BoundsError())
 end
 
 # copy and similar
-Base.copy(v::BorderedVector) = BorderedVector(copy(v._₁), v._₂)
-Base.similar(v::BorderedVector) = BorderedVector(similar(v._₁), zero(v._₂))
+Base.copy(v::BorderedVector) = BorderedVector(copy(v._1), v._2)
+Base.similar(v::BorderedVector) = BorderedVector(similar(v._1), zero(v._2))
 
 # collect to a DenseArray - useful for debugging solvers
 Base.full(v::BorderedVector) = collect(v)
@@ -44,10 +44,10 @@ Base.full(v::BorderedVector) = collect(v)
 mutable struct BorderedMatrix{T<:Number, 
                               M<:AbstractMatrix{T}, 
                               V<:AbstractVector{T}} <: AbstractMatrix{T}
-    _₁₁::M # main top left - any matrix
-    _₁₂::V # vertical right vector - any vector
-    _₂₁::V # horizontal bottom vector - any vector
-    _₂₂::T # bottom right element - a scalar
+    _11::M # main top left - any matrix
+    _12::V # vertical right vector - any vector
+    _21::V # horizontal bottom vector - any vector
+    _22::T # bottom right element - a scalar
     function BorderedMatrix(M₁₁::M,
                             M₁₂::V,
                             M₂₁::V,
@@ -59,22 +59,22 @@ mutable struct BorderedMatrix{T<:Number,
 end
 
 # array interface
-Base.size(M::BorderedMatrix) = (size(M._₁₁, 1) + 1, size(M._₁₁, 2) + 1)
+Base.size(M::BorderedMatrix) = (size(M._11, 1) + 1, size(M._11, 2) + 1)
 Base.IndexStyle(v::BorderedMatrix) = Base.IndexCartesian()
 
 function Base.getindex(M::BorderedMatrix, i::Integer, j::Integer)
     m, n = size(M)
     if i < m
         if j < n
-            return M._₁₁[i, j]
+            return M._11[i, j]
         elseif j == n
-            return M._₁₂[i]
+            return M._12[i]
         end
     elseif i == m
         if j < n
-            return M._₂₁[j]
+            return M._21[j]
         elseif j == n
-            return M._₂₂
+            return M._22
         end
     end
     throw(BoundsError())
@@ -84,15 +84,15 @@ function Base.setindex!(M::BorderedMatrix, val, i::Integer, j::Integer)
     m, n = size(M)
     if i < m
         if j < n
-            return M._₁₁[i, j] = val
+            return M._11[i, j] = val
         elseif j == n
-            return M._₁₂[i] = val
+            return M._12[i] = val
         end
     elseif i == m
         if j < n
-            return M._₂₁[j] = val
+            return M._21[j] = val
         elseif j == n
-            return M._₂₂ = val
+            return M._22 = val
         end
     end
     throw(BoundsError())
@@ -100,10 +100,10 @@ end
 
 # copy/similar
 Base.copy(M::BorderedMatrix) = 
-    BorderedMatrix(copy(M._₁₁), copy(M._₁₂), copy(M._₂₁), M._₂₂)
+    BorderedMatrix(copy(M._11), copy(M._12), copy(M._21), M._22)
 
 Base.similar(M::BorderedMatrix) = 
-    BorderedMatrix(similar(M._₁₁), similar(M._₁₂), similar(M._₂₁), zero(M._₂₂))
+    BorderedMatrix(similar(M._11), similar(M._12), similar(M._21), zero(M._22))
 
 # collect to a DenseArray - useful for debugging solvers
 function Base.full{T}(M::BorderedMatrix{T})
@@ -120,14 +120,14 @@ end
 struct BorderedMatrixLU{T<:Number, 
                         M<:Factorization{T}, 
                         V<:AbstractVector{T}} <: Factorization{T}
-    _₁₁::M # the parent matrix - factorised in place
-    _₁₂::V # the right bordering vector
-    _₂₁::V # the bottom bordering vector
-    _₂₂::T # the bordering scalar
+    _11::M # the parent matrix - factorised in place
+    _12::V # the right bordering vector
+    _21::V # the bottom bordering vector
+    _22::T # the bordering scalar
 end
 
 Base.lufact!(M::BorderedMatrix) = 
-    BorderedMatrixLU(lufact!(M._₁₁), M._₁₂, M._₂₁, M._₂₂)
+    BorderedMatrixLU(lufact!(M._11), M._12, M._21, M._22)
 
 function Base.LinAlg.A_ldiv_B!(M::BorderedMatrix, r::BorderedVector, alg::Symbol=:BEM)
     # Solve the system
@@ -162,12 +162,12 @@ end
 # solve bordered system with block elimination method
 function alg_BEM!(MLU::BorderedMatrixLU, r::BorderedVector)
     # rename variables
-    Aᶠ = MLU._₁₁ # factorisation of AbstractMatrix
-    b  = MLU._₁₂ # AbstractVector
-    c  = MLU._₂₁ # AbstractVector
-    d  = MLU._₂₂ # Scalar
-    f  = r._₁    # AbstractVector
-    g  = r._₂    # Scalar
+    Aᶠ = MLU._11 # factorisation of AbstractMatrix
+    b  = MLU._12 # AbstractVector
+    c  = MLU._21 # AbstractVector
+    d  = MLU._22 # Scalar
+    f  = r._1    # AbstractVector
+    g  = r._2    # Scalar
 
     # step 1: solve Aᵀw = c
     w = At_ldiv_B!(Aᶠ, copy(c))        # allocation
@@ -198,14 +198,14 @@ function alg_BEM!(MLU::BorderedMatrixLU, r::BorderedVector)
     # step 9
     y₂ = (g₁ - dot(c, ξ))/δ
 
-    # step 10: x = ξ - v*y₂ - aliased to r._₁
-    x = r._₁
+    # step 10: x = ξ - v*y₂ - aliased to r._1
+    x = r._1
     @simd for i in 1:length(x)
         @inbounds x[i] = ξ[i] - v[i]*y₂
     end
 
     # step 11 - y = y₁ + y₂
-    r._₂ = y₁ + y₂
+    r._2 = y₁ + y₂
 
     r
 end
@@ -213,12 +213,12 @@ end
 # solve bordered system using doolittle factorisation
 function alg_BED!(MLU::BorderedMatrixLU, r::BorderedVector)
     # rename variables
-    Aᶠ = MLU._₁₁ # Factorization of AbstractMatrix
-    b  = MLU._₁₂ # AbstractVector
-    c  = MLU._₂₁ # AbstractVector
-    d  = MLU._₂₂ # Scalar
-    f  = r._₁  # AbstractVector
-    g  = r._₂  # Scalar
+    Aᶠ = MLU._11 # Factorization of AbstractMatrix
+    b  = MLU._12 # AbstractVector
+    c  = MLU._21 # AbstractVector
+    d  = MLU._22 # Scalar
+    f  = r._1  # AbstractVector
+    g  = r._2  # Scalar
 
     # step 1 solve A' * w = c - overwrite c with w
     w = At_ldiv_B!(Aᶠ, c)
@@ -227,11 +227,11 @@ function alg_BED!(MLU::BorderedMatrixLU, r::BorderedVector)
     δ⁺ = d - dot(w, b)
 
     # step 3: compute y = (g - w'*f)/δ⁺
-    r._₂ = (g - dot(w, f))/δ⁺    
+    r._2 = (g - dot(w, f))/δ⁺    
 
     # step 4: solve A*x = f - b*y
     @simd for i in 1:length(f)
-        @inbounds f[i] -= b[i]*r._₂
+        @inbounds f[i] -= b[i]*r._2
     end
     A_ldiv_B!(Aᶠ, f)
 
