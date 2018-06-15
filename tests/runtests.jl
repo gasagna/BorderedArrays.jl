@@ -119,7 +119,7 @@ let
                       2  3  4  1  3;
                       1  2  3  1  4;
                       4  3  2  1  0] == M
-    N._₁₁[1, 1] = 5
+    N._11[1, 1] = 5
     @test M[1, 1] == 1
 
     N = similar(M)
@@ -129,7 +129,7 @@ let
     end
 end
 
-# test solution of bordered matrix
+# test solution of bordered matrix - in-place
 let
     srand(0)
     for n = 10:100
@@ -156,6 +156,39 @@ let
         # check
         @test rBED ≈ rd
         @test rBEM ≈ rd
+    end
+end
+
+# test solution of bordered matrix - out-of-place
+let
+    srand(0)
+    for n = 10:100
+        # demo matrices
+        A = sprand(n, n, 1.0)
+        b = rand(n)
+        c = rand(n)
+        d = rand()
+        M  = BorderedMatrix(A, b, c, d)
+        Mv = BorderedMatrix(copy(A), copy(b), copy(c), copy(d))
+        Md = full(M)
+
+        # demo array
+        x = rand(n)
+        y = rand()
+        r = BorderedVector(x, y)
+        rd = full(r)
+
+        # solutions
+        rBEM  = Base.LinAlg.A_ldiv_B!(copy(M), copy(r), :BEM, false)
+        rBED  = Base.LinAlg.A_ldiv_B!(copy(M), copy(r), :BED, false)
+        rd = Md\rd
+
+        # check
+        @test rBED ≈ rd
+        @test rBEM ≈ rd
+
+        # we cannot perform LU decomposition on sparse array in place
+        @test_throws MethodError Base.LinAlg.A_ldiv_B!(copy(M), copy(r), :BEM, true)
     end
 end
 

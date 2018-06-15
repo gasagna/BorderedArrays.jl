@@ -120,16 +120,20 @@ end
 struct BorderedMatrixLU{T<:Number, 
                         M<:Factorization{T}, 
                         V<:AbstractVector{T}} <: Factorization{T}
-    _11::M # the parent matrix - factorised in place
+    _11::M # the parent matrix factorisation
     _12::V # the right bordering vector
     _21::V # the bottom bordering vector
     _22::T # the bordering scalar
 end
 
+# in-place and out-of-place factorisations
 Base.lufact!(M::BorderedMatrix) = 
     BorderedMatrixLU(lufact!(M._11), M._12, M._21, M._22)
 
-function Base.LinAlg.A_ldiv_B!(M::BorderedMatrix, r::BorderedVector, alg::Symbol=:BEM)
+Base.lufact(M::BorderedMatrix) = 
+    BorderedMatrixLU(lufact(M._11), M._12, M._21, M._22)
+
+function Base.LinAlg.A_ldiv_B!(M::BorderedMatrix, r::BorderedVector, alg::Symbol=:BEM, inplace::Bool=true)
     # Solve the system
     #         
     #     M * z = r
@@ -149,7 +153,7 @@ function Base.LinAlg.A_ldiv_B!(M::BorderedMatrix, r::BorderedVector, alg::Symbol
     size(M, 1) == length(r) || 
         throws(DimensionMismatch("inner dimensions must agree"))
 
-    A_ldiv_B!(lufact!(M), r, alg)
+    return inplace ? A_ldiv_B!(lufact!(M), r, alg) : A_ldiv_B!(lufact(M), r, alg)
 end
 
 function Base.LinAlg.A_ldiv_B!(MLU::BorderedMatrixLU, r::BorderedVector, alg::Symbol=:BEM)
