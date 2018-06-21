@@ -107,12 +107,12 @@ Base.similar(M::BorderedMatrix) =
 
 # collect to a DenseArray - useful for debugging solvers
 function Base.full{T}(M::BorderedMatrix{T})
-    m, n = size(M)
-    Mdense = zeros(T, m, n)
-    for i = 1:m, j = 1:n
-        Mdense[i, j] = M[i, j]
-    end
-    Mdense
+    Mfull  = zeros(T, size(M)...)
+    Mfull[1:size(M._11, 1), 1:size(M._11, 2)] .= full(M._11)
+    Mfull[1:size(M._11, 1),   size(Mfull, 2)] .= M._12
+    Mfull[size(Mfull, 1),   1:size(M._11, 2)] .= M._21
+    Mfull[size(Mfull, 1),     size(Mfull, 2)] .= M._22
+    return Mfull
 end
 
 
